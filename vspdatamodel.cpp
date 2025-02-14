@@ -1,6 +1,8 @@
 #include "vspdatamodel.h"
 #include <QDebug>
 #include <QList>
+#include <QRect>
+#include <QSize>
 #include <QString>
 
 VSPDataModel::VSPDataModel(QObject* parent)
@@ -31,16 +33,34 @@ int VSPDataModel::columnCount(const QModelIndex& parent) const
 
 QVariant VSPDataModel::headerData(int section, Qt::Orientation orientation, int role) const
 {
-    if (role == Qt::DisplayRole && orientation == Qt::Horizontal) {
-        switch (section) {
-            case 0:
-                return QVariant::fromValue(tr("ID"));
-            case 1:
-                return QVariant::fromValue(tr("Name"));
-            case 2:
-                return QVariant::fromValue(tr("Port 1"));
-            case 3:
-                return QVariant::fromValue(tr("Port 2"));
+    if (orientation == Qt::Horizontal) {
+        switch (role) {
+            case Qt::DisplayRole: {
+                switch (section) {
+                    case 0:
+                        return QVariant::fromValue(tr("ID"));
+                    case 1:
+                        return QVariant::fromValue(tr("Name"));
+                    case 2:
+                        return QVariant::fromValue(tr("Port A"));
+                    case 3:
+                        return QVariant::fromValue(tr("Port B"));
+                }
+                break;
+            }
+            case Qt::SizeHintRole: {
+                switch (section) {
+                    case 0:
+                        return QVariant::fromValue(QSize(30, 22));
+                    case 1:
+                        return QVariant::fromValue(QSize(230, 22));
+                    case 2:
+                        return QVariant::fromValue(QSize(60, 22));
+                    case 3:
+                        return QVariant::fromValue(QSize(60, 22));
+                }
+                break;
+            }
         }
     }
     return QVariant();

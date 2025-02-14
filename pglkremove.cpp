@@ -29,6 +29,9 @@ void PGLKRemove::setModel(const VSPDataModel* model)
                 VSPDataModel::TDataRecord r = model->at(i).value<VSPDataModel::TDataRecord>();
                 ui->comboBox->addItem(r.link.name, QVariant::fromValue(r.link));
             }
+
+            ui->comboBox->setEnabled(ui->comboBox->count() > 0);
+            ui->btnUnlink->setEnabled(ui->comboBox->count() > 0);
         });
     }
 }

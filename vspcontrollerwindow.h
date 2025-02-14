@@ -23,7 +23,7 @@ public:
 private slots:
     void onClientConnected();
     void onClientDisconnected();
-    void onClientError(int error, const char* message);
+    void onClientError(int error, const QString& message);
     void onUpdateStatusLog(const QByteArray& message);
     void onUpdateButtons(bool enabled = false);
     void onComplete();

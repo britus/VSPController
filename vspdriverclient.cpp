@@ -111,7 +111,7 @@ void VSPDriverClient::OnIOUCCallback(int result, void** args, uint32_t numArgs)
             }
         }
     }
-    else if (header->statusCode != 0) {
+    else {
         m_portList.resetModel();
         m_linkList.resetModel();
     }
@@ -123,7 +123,6 @@ void VSPDriverClient::OnIOUCCallback(int result, void** args, uint32_t numArgs)
         emit updateButtons(true);
         if (result != 0) {
             emit errorOccured(result, txStatus);
-            return;
         }
         emit complete();
     });

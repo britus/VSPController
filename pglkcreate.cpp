@@ -25,11 +25,20 @@ void PGLKCreate::setModel(const VSPDataModel* model)
         connect(model, &QAbstractTableModel::modelReset, this, [this, model]() {
             ui->cbPort1->clear();
             ui->cbPort2->clear();
+
             for (int i = 0; i < model->rowCount(); i++) {
                 VSPDataModel::TDataRecord r = model->at(i).value<VSPDataModel::TDataRecord>();
                 ui->cbPort1->addItem(r.port.name, QVariant::fromValue(r.port));
                 ui->cbPort2->addItem(r.port.name, QVariant::fromValue(r.port));
             }
+
+            const bool enab =              //
+               ui->cbPort1->count() > 0 && //
+               ui->cbPort2->count() > 0;
+
+            ui->cbPort1->setEnabled(enab);
+            ui->cbPort2->setEnabled(enab);
+            ui->btnLinkPorts->setEnabled(enab);
         });
     }
 }

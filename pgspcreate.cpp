@@ -1,11 +1,26 @@
 #include "pgspcreate.h"
 #include "ui_pgspcreate.h"
+#include <QSerialPort>
+#include <QSerialPortInfo>
+
+Q_DECLARE_METATYPE(QSerialPortInfo)
+Q_DECLARE_METATYPE(QSerialPort::BaudRate)
+Q_DECLARE_METATYPE(QSerialPort::DataBits)
+Q_DECLARE_METATYPE(QSerialPort::StopBits)
+Q_DECLARE_METATYPE(QSerialPort::Parity)
 
 PGSPCreate::PGSPCreate(QWidget* parent)
     : QWidget(parent)
     , ui(new Ui::PGSPCreate)
 {
     ui->setupUi(this);
+
+    // initComboSerialPort(ui->cbSerialPort, nullptr);
+    initComboBaudRate(ui->cbBaud, nullptr);
+    initComboDataBits(ui->cbDataBits, nullptr);
+    initComboStopBits(ui->cbStopBits, nullptr);
+    initComboParity(ui->cbParity, nullptr);
+    initComboFlowCtrl(ui->cbFlowControl, nullptr);
 }
 
 PGSPCreate::~PGSPCreate()
@@ -18,6 +33,253 @@ QPushButton* PGSPCreate::button()
     return ui->btnDoSPCreate;
 }
 
-void PGSPCreate::setModel(VSPDataModel* model)
+void PGSPCreate::setModel(VSPDataModel* /*model*/)
 {
+}
+
+QSerialPort::BaudRate PGSPCreate::baudRate() const
+{
+    QVariant v = ui->cbBaud->currentData();
+    if (v.isNull() || !v.isValid()) {
+        return QSerialPort::BaudRate::Baud115200;
+    }
+    return v.value<QSerialPort::BaudRate>();
+}
+
+QSerialPort::DataBits PGSPCreate::dataBits() const
+{
+    QVariant v = ui->cbDataBits->currentData();
+    if (v.isNull() || !v.isValid()) {
+        return QSerialPort::DataBits::Data8;
+    }
+    return v.value<QSerialPort::DataBits>();
+}
+
+QSerialPort::StopBits PGSPCreate::stopBits() const
+{
+    QVariant v = ui->cbDataBits->currentData();
+    if (v.isNull() || !v.isValid()) {
+        return QSerialPort::StopBits::OneStop;
+    }
+    return v.value<QSerialPort::StopBits>();
+}
+
+QSerialPort::Parity PGSPCreate::parity() const
+{
+    QVariant v = ui->cbDataBits->currentData();
+    if (v.isNull() || !v.isValid()) {
+        return QSerialPort::Parity::NoParity;
+    }
+    return v.value<QSerialPort::Parity>();
+}
+
+QSerialPort::FlowControl PGSPCreate::flowCtrl() const
+{
+    QVariant v = ui->cbDataBits->currentData();
+    if (v.isNull() || !v.isValid()) {
+        return QSerialPort::FlowControl::NoFlowControl;
+    }
+    return v.value<QSerialPort::FlowControl>();
+}
+
+inline void PGSPCreate::initComboSerialPort(QComboBox* cbx, QComboBox* link)
+{
+    const QIcon icon1(":/res/full/elcl16/synced.gif");
+    const QList<QSerialPortInfo> ports = QSerialPortInfo::availablePorts();
+    const int selection = (!link ? 0 : link->currentIndex());
+    const QVariant vsel = (!link ? QVariant() : link->itemData(selection));
+
+    /* fill combo box with serial ports */
+    cbx->clear();
+    cbx->setCurrentIndex(-1);
+    for (int i = 0; i < ports.count(); i++) {
+        // <Name>, <QSerialPortInfo>
+        cbx->addItem(icon1, ports[i].portName(), QVariant::fromValue(ports[i]));
+        if (!vsel.isNull() && vsel.isValid()) {
+            if (ports[i].portName().contains(vsel.toString())) {
+                cbx->setCurrentIndex(i);
+            }
+        }
+    }
+    if (cbx->currentIndex() < 0) {
+        cbx->setCurrentIndex(0);
+    }
+}
+
+inline void PGSPCreate::initComboBaudRate(QComboBox* cbx, QComboBox* link)
+{
+    const QIcon icon3(":/res/actions/16x16/debug-exec.png");
+
+    typedef struct {
+        QString name;
+        QSerialPort::BaudRate baud;
+    } TBaudRates;
+
+    TBaudRates baudRates[8] = {
+       {tr("1200"), QSerialPort::Baud1200},
+       {tr("2400"), QSerialPort::Baud2400},
+       {tr("4800"), QSerialPort::Baud4800},
+       {tr("9600"), QSerialPort::Baud9600},
+       {tr("19200"), QSerialPort::Baud19200},
+       {tr("38400"), QSerialPort::Baud38400},
+       {tr("57600"), QSerialPort::Baud57600},
+       {tr("115200"), QSerialPort::Baud115200},
+    };
+
+    const int selection = (!link ? 0 : link->currentIndex());
+    QVariant vsel = (!link ? QVariant() : link->itemData(selection));
+
+    if (vsel.isNull() || !vsel.isValid()) {
+        vsel = QVariant::fromValue(baudRates[7].baud);
+    }
+
+    cbx->clear();
+    for (int i = 0; i < 8; i++) {
+        cbx->addItem(icon3, baudRates[i].name, QVariant::fromValue(baudRates[i].baud));
+        if (!vsel.isNull() && vsel.isValid()) {
+            if (baudRates[i].baud == vsel.value<QSerialPort::BaudRate>()) {
+                cbx->setCurrentIndex(i);
+            }
+        }
+    }
+}
+
+inline void PGSPCreate::initComboDataBits(QComboBox* cbx, QComboBox* link)
+{
+    const QIcon icon3(":/res/actions/16x16/debug-exec.png");
+
+    typedef struct {
+        QString name;
+        QSerialPort::DataBits bits;
+    } TDataBits;
+
+    TDataBits dataBits[4] = {
+       {tr("5 Bits"), QSerialPort::Data5},
+       {tr("6 Bits"), QSerialPort::Data6},
+       {tr("7 Bits"), QSerialPort::Data7},
+       {tr("8 Bits"), QSerialPort::Data8},
+    };
+
+    const int selection = (!link ? 0 : link->currentIndex());
+    QVariant vsel = (!link ? QVariant() : link->itemData(selection));
+
+    if (vsel.isNull() || !vsel.isValid()) {
+        vsel = QVariant::fromValue(dataBits[3].bits);
+    }
+
+    cbx->clear();
+    for (int i = 0; i < 4; i++) {
+        cbx->addItem(icon3, dataBits[i].name, QVariant::fromValue(dataBits[i].bits));
+        if (!vsel.isNull() && vsel.isValid()) {
+            if (dataBits[i].bits == vsel.value<QSerialPort::DataBits>()) {
+                cbx->setCurrentIndex(i);
+            }
+        }
+    }
+}
+
+inline void PGSPCreate::initComboStopBits(QComboBox* cbx, QComboBox* link)
+{
+    const QIcon icon3(":/res/actions/16x16/debug-exec.png");
+
+    typedef struct {
+        QString name;
+        QSerialPort::StopBits bits;
+    } TStopBits;
+
+    TStopBits stopBits[3] = {
+       {tr("One Stop"), QSerialPort::OneStop},
+       {tr("One and Half"), QSerialPort::OneAndHalfStop},
+       {tr("Two Stop"), QSerialPort::TwoStop},
+    };
+
+    const int selection = (!link ? 0 : link->currentIndex());
+    QVariant vsel = (!link ? QVariant() : link->itemData(selection));
+
+    if (vsel.isNull() || !vsel.isValid()) {
+        vsel = QVariant::fromValue(stopBits[0].bits);
+    }
+
+    cbx->clear();
+    for (int i = 0; i < 3; i++) {
+        cbx->addItem(icon3, stopBits[i].name, QVariant::fromValue(stopBits[i].bits));
+        if (!vsel.isNull() && vsel.isValid()) {
+            if (stopBits[i].bits == vsel.value<QSerialPort::StopBits>()) {
+                cbx->setCurrentIndex(i);
+            }
+        }
+    }
+}
+
+inline void PGSPCreate::initComboParity(QComboBox* cbx, QComboBox* link)
+{
+    const QIcon icon3(":/res/actions/16x16/debug-exec.png");
+
+    typedef struct {
+        QString name;
+        QSerialPort::Parity parity;
+    } TParity;
+
+    TParity parity[5] = {
+       {tr("No Parity"), QSerialPort::NoParity},
+       {tr("Event Parity"), QSerialPort::EvenParity},
+       {tr("Odd Parity"), QSerialPort::OddParity},
+       {tr("Space Parity"), QSerialPort::SpaceParity},
+       {tr("Mark Parity"), QSerialPort::MarkParity},
+    };
+
+    const int selection = (!link ? 0 : link->currentIndex());
+    QVariant vsel = (!link ? QVariant() : link->itemData(selection));
+
+    if (vsel.isNull() || !vsel.isValid()) {
+        vsel = QVariant::fromValue(parity[0].parity);
+    }
+
+    cbx->clear();
+    for (int i = 0; i < 5; i++) {
+        cbx->addItem(icon3, parity[i].name, QVariant::fromValue(parity[i].parity));
+        if (!vsel.isNull() && vsel.isValid()) {
+            if (parity[i].parity == vsel.value<QSerialPort::Parity>()) {
+                cbx->setCurrentIndex(i);
+            }
+        }
+    }
+
+    /* connect event only once */
+    if (cbx->property("init").toBool()) {
+        return;
+    }
+}
+
+inline void PGSPCreate::initComboFlowCtrl(QComboBox* cbx, QComboBox* link)
+{
+    const QIcon icon3(":/res/actions/16x16/debug-exec.png");
+
+    typedef struct {
+        QString name;
+        QSerialPort::FlowControl flow;
+    } TFlowControl;
+
+    TFlowControl flowctrl[3] = {
+       {tr("No Flow Control"), QSerialPort::NoFlowControl},
+       {tr("Hardware Control"), QSerialPort::HardwareControl},
+       {tr("Software Control"), QSerialPort::SoftwareControl},
+    };
+
+    const int selection = (!link ? 0 : link->currentIndex());
+    QVariant vsel = (!link ? QVariant() : link->itemData(selection));
+
+    if (vsel.isNull() || !vsel.isValid()) {
+        vsel = QVariant::fromValue(flowctrl[0].flow);
+    }
+
+    cbx->clear();
+    for (int i = 0; i < 3; i++) {
+        cbx->addItem(icon3, flowctrl[i].name, QVariant::fromValue(flowctrl[i].flow));
+        if (!vsel.isNull() && vsel.isValid()) {
+            if (flowctrl[i].flow == vsel.value<QSerialPort::FlowControl>()) {
+                cbx->setCurrentIndex(i);
+            }
+        }
+    }
 }

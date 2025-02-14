@@ -153,11 +153,11 @@ void VSPControllerWindow::onClientDisconnected()
     enableDefaultButton(ui->btn09Connect);
 }
 
-void VSPControllerWindow::onClientError(int error, const char* message)
+void VSPControllerWindow::onClientError(int error, const QString& message)
 {
     QString text;
 
-    text += QStringLiteral("VSP driver error %1 %2\n\n").arg(error).arg(message);
+    text += QStringLiteral("VSP driver error %1:\n%2\n\n").arg(error).arg(message);
     if (!m_vsp->IsConnected() && error == kIOErrorNotFound) {
         text += "You must install the VSP Driver extension first.\n";
     }
@@ -206,7 +206,6 @@ void VSPControllerWindow::updateOverlayGeometry()
     }
 
     if (centralWidget()) {
-
         QRect ovr = centralWidget()->rect();
         int width = 100;  // ovr.width() - (ovr.width() * 15 / 100);
         int height = 100; // ovr.height() - (ovr.height() * 15 / 100);
@@ -367,10 +366,21 @@ void VSPControllerWindow::on_btn10Close_clicked()
 
 void VSPControllerWindow::onActionSPCreate()
 {
+    if (ui->stackedWidget->currentWidget() != ui->pg01SPCreate) {
+        return;
+    }
+
+    VSPClient::TVSPPortParameters params;
+    params.baudRate = ui->pg01SPCreate->baudRate();
+    params.dataBits = ui->pg01SPCreate->dataBits();
+    params.stopBits = ui->pg01SPCreate->stopBits();
+    params.parity = ui->pg01SPCreate->parity();
+    params.flowCtrl = ui->pg01SPCreate->flowCtrl();
+
     showOverlay();
-    if (!m_vsp->CreatePort()) {
-        ui->textBrowser->setPlainText("LinkPorts failed.");
-        removeOverlay();
+
+    if (!m_vsp->CreatePort(&params)) {
+        emit m_vsp->errorOccured(-1, "LinkPorts failed.");
         return;
     }
 }
@@ -380,8 +390,7 @@ void VSPControllerWindow::onActionSPRemove()
     if (ui->stackedWidget->currentWidget() == ui->pg02SPRemove) {
         showOverlay();
         if (!m_vsp->RemovePort(ui->pg02SPRemove->selection().id)) {
-            ui->textBrowser->setPlainText("UnlinkPorts failed.");
-            removeOverlay();
+            emit m_vsp->errorOccured(-1, "UnlinkPorts failed.");
             return;
         }
     }
@@ -394,8 +403,7 @@ void VSPControllerWindow::onActionLKCreate()
         VSPDataModel::TPortItem p2 = ui->pg03LKCreate->selection2();
         showOverlay();
         if (!m_vsp->LinkPorts(p1.id, p2.id)) {
-            ui->textBrowser->setPlainText("LinkPorts failed.");
-            removeOverlay();
+            emit m_vsp->errorOccured(-1, "LinkPorts failed.");
             return;
         }
     }
@@ -408,8 +416,7 @@ void VSPControllerWindow::onActionLKRemove()
             VSPDataModel::TPortLink link = ui->pg04LKRemove->selection();
             showOverlay();
             if (!m_vsp->UnlinkPorts(link.source.id, link.target.id)) {
-                ui->textBrowser->setPlainText("UnlinkPorts failed.");
-                removeOverlay();
+                emit m_vsp->errorOccured(-1, "UnlinkPorts failed.");
                 return;
             }
         }
@@ -423,8 +430,7 @@ void VSPControllerWindow::onActionPortList()
 {
     showOverlay();
     if (!m_vsp->GetPortList()) {
-        ui->textBrowser->setPlainText("GetPortList failed.");
-        removeOverlay();
+        emit m_vsp->errorOccured(-1, "GetPortList failed.");
         return;
     }
 }
@@ -433,8 +439,7 @@ void VSPControllerWindow::onActionLinkList()
 {
     showOverlay();
     if (!m_vsp->GetLinkList()) {
-        ui->textBrowser->setPlainText("GetLinkList failed.");
-        removeOverlay();
+        emit m_vsp->errorOccured(-1, "GetLinkList failed.");
         return;
     }
 }
@@ -443,8 +448,7 @@ void VSPControllerWindow::onActionEditChecks()
 {
     showOverlay();
     if (!m_vsp->EnableChecks(1)) {
-        ui->textBrowser->setPlainText("EnableChecks failed.");
-        removeOverlay();
+        emit m_vsp->errorOccured(-1, "EnableChecks failed.");
         return;
     }
 }
@@ -453,8 +457,7 @@ void VSPControllerWindow::onActionEditTraces()
 {
     showOverlay();
     if (!m_vsp->EnableTrace(1)) {
-        ui->textBrowser->setPlainText("EnableTrace failed.");
-        removeOverlay();
+        emit m_vsp->errorOccured(-1, "EnableTrace failed.");
         return;
     }
 }
@@ -463,9 +466,8 @@ void VSPControllerWindow::onActionVspConnect()
 {
     showOverlay();
     if (!m_vsp->IsConnected() && !m_vsp->ConnectDriver()) {
-        ui->textBrowser->setPlainText("ConnectDriver failed.");
+        emit m_vsp->errorOccured(-1, "ConnectDriver failed.");
         onClientDisconnected();
-        removeOverlay();
         return;
     }
     if (!m_vsp->GetStatus()) {

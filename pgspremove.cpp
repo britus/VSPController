@@ -28,6 +28,9 @@ void PGSPRemove::setModel(const VSPDataModel* model)
                 VSPDataModel::TDataRecord r = model->at(i).value<VSPDataModel::TDataRecord>();
                 ui->cbSerialPorts->addItem(r.port.name, QVariant::fromValue(r.port));
             }
+            bool enab = ui->cbSerialPorts->count() > 0;
+            ui->cbSerialPorts->setEnabled(enab);
+            ui->btnDoSPRemove->setEnabled(enab);
         });
     }
 }

@@ -49,7 +49,7 @@ public:
 signals:
     void connected();
     void disconnected();
-    void errorOccured(int error, const char* message);
+    void errorOccured(int error, const QString& message);
     void updateStatusLog(const QByteArray& message);
     void updateButtons(bool enabled = false);
     void complete();
