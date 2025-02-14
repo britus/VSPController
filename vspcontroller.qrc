@@ -1,0 +1,6 @@
+<RCC>
+    <qresource prefix="/">
+        <file alias="progress1">assets/ani/progress.gif</file>
+        <file alias="progress2">assets/ani/progress2.gif</file>
+    </qresource>
+</RCC>
