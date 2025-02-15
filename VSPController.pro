@@ -17,6 +17,9 @@ CONFIG += embed_translations
 CONFIG += create_prl
 CONFIG += app_bundle
 
+QMAKE_MACOSX_DEPLOYMENT_TARGET = 12.2
+#QMAKE_APPLE_DEVICE_ARCHS = x86_64 arm64
+
 # You can make your code fail to compile if it uses deprecated APIs.
 # In order to do so, uncomment the following line.
 # disables all the APIs deprecated before Qt 6.0.0
@@ -80,6 +83,8 @@ CONFIG += lrelease
 CONFIG += embed_translations
 CONFIG += embed_libraries
 
+#otool -L
+LIBS += -dead_strip
 LIBS += -L$$VSPLIB_DIR -l$$VSPLIB_LIB
 LIBS += -liconv
 

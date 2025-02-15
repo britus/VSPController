@@ -1,6 +1,7 @@
 #include "vspcontrollerwindow.h"
 #include "ui_vspcontrollerwindow.h"
 #include <QDebug>
+#include <QDesktopServices>
 #include <QMovie>
 #include <QTimer>
 
@@ -133,6 +134,8 @@ void VSPControllerWindow::onClientConnected()
        << ui->btn08Traces);
     on_btn01SPCreate_clicked();
     disableButtonState(ui->btn09Connect);
+    ui->textBrowser->setPlainText("Connected.");
+    removeOverlay();
 }
 
 void VSPControllerWindow::onClientDisconnected()
@@ -151,6 +154,7 @@ void VSPControllerWindow::onClientDisconnected()
        << ui->btn08Traces);
     enableButtonState(ui->btn09Connect);
     enableDefaultButton(ui->btn09Connect);
+    ui->textBrowser->setPlainText("Disconnected.");
 }
 
 void VSPControllerWindow::onClientError(int error, const QString& message)
@@ -468,6 +472,10 @@ void VSPControllerWindow::onActionVspConnect()
     if (!m_vsp->IsConnected() && !m_vsp->ConnectDriver()) {
         emit m_vsp->errorOccured(-1, "ConnectDriver failed.");
         onClientDisconnected();
+        if (sender() == ui->pg09Connect->button()) {
+            QString link = "vspinstall://";
+            QDesktopServices::openUrl(QUrl(link));
+        }
         return;
     }
     if (!m_vsp->GetStatus()) {
