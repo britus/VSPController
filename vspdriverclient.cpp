@@ -21,20 +21,9 @@ void VSPDriverClient::OnDisconnected()
     emit disconnected();
 }
 
-void VSPDriverClient::OnIOUCCallback(int result, void** args, uint32_t numArgs)
+void VSPDriverClient::OnIOUCCallback(int result, void* args, uint32_t size)
 {
-    struct vsp_header {
-        uint64_t context;
-        uint64_t command;
-        uint64_t paramFlags;
-        uint64_t portSource;
-        uint64_t portTarget;
-        uint64_t statusCode;
-        uint64_t statusFlags;
-        uint64_t listCount;
-    };
-    const struct vsp_header* header = (struct vsp_header*) (args);
-    const int64_t* arrayArgs = (const int64_t*) args;
+    const TVSPControllerData* data = (TVSPControllerData*) (args);
 
     QByteArray buffer;
     QTextStream text(&buffer);
@@ -42,77 +31,70 @@ void VSPDriverClient::OnIOUCCallback(int result, void** args, uint32_t numArgs)
     // make sure we have an error code
     result =
        (result == 0 //
-           ? header->statusCode
+           ? data->status.code
            : result);
 
     QByteArray txStatus =
-       (header->context != 4 //
+       (data->context != 4 //
            ? " success"
            : " failed #" + QString::number(result & 0x00000000ffffffff, 16).toUtf8());
 
     text << "Driver callback result:" << Qt::endl;
-    text << "Command........: " << header->command << txStatus << Qt::endl;
-    text << "Context........: " << header->context << Qt::endl;
-    text << "Parameter flags: " << Qt::hex << header->paramFlags << Qt::endl;
-    text << "Port 1.........: " << header->portSource << Qt::endl;
-    text << "Port 2.........: " << header->portTarget << Qt::endl;
-    text << "List count.....: " << header->listCount << Qt::endl;
-    text << "Status code....: " << header->statusCode << Qt::endl;
-    text << "Status flags...: " << Qt::hex << header->statusFlags << Qt::endl;
+    text << "Data size......: " << size << Qt::endl;
+    text << "Context........: " << data->context << Qt::endl;
+    text << "Command........: " << data->command << txStatus << Qt::endl;
+    text << "Status code....: " << data->status.code << Qt::endl;
+    text << "Status flags...: " << Qt::hex << data->status.flags << Qt::endl;
+    text << "Parameter flags: " << Qt::hex << data->parameter.flags << Qt::endl;
+    text << "Port 1.........: " << data->parameter.link.source << Qt::endl;
+    text << "Port 2.........: " << data->parameter.link.target << Qt::endl;
+    text << "Port count.....: " << data->ports.count << Qt::endl;
+    text << "Link count.....: " << data->links.count << Qt::endl;
 
-    if (header->listCount) {
-        uint8_t offset = 8;
-        switch (header->command) {
-            case vspControlCreatePort:
-            case vspControlRemovePort:
-            case vspControlGetPortList:
-            case vspControlGetStatus: {
-                m_portList.resetModel();
-                for (uint32_t i = 0; i < header->listCount && (offset + i) < numArgs; i++) {
-                    const uint8_t pid = (*(arrayArgs + offset + i));
-                    text << "Port item......: " << pid << Qt::endl;
-                    m_portList.append(VSPDataModel::TPortItem({pid, tr("Port %1").arg(pid)}));
-                    continue;
-                }
-                break;
-            }
-            case vspControlLinkPorts:
-            case vspControlUnlinkPorts:
-            case vspControlGetLinkList: {
-                m_linkList.resetModel();
-                for (uint32_t i = 0; i < header->listCount && (offset + i) < numArgs; i++) {
-                    const uint8_t lid = ((*(arrayArgs + offset + i)) >> 16) & 0x000000ff;
-                    const uint8_t src = ((*(arrayArgs + offset + i)) >> 8) & 0x000000ff;
-                    const uint8_t tgt = ((*(arrayArgs + offset + i))) & 0x000000ff;
-                    VSPDataModel::TPortItem p1 = {};
-                    VSPDataModel::TPortItem p2 = {};
-                    QString name = tr("[Port A: %1 <-> Port B: %2]").arg(src).arg(tgt);
-                    text << "Link item......: " << lid << " " << name << Qt::endl;
-                    for (int i = 0; i < m_portList.rowCount(); i++) {
-                        VSPDataModel::TDataRecord r = m_portList.at(i).value<VSPDataModel::TDataRecord>();
-                        if (r.port.id == src) {
-                            p1 = r.port;
-                        }
-                        if (r.port.id == tgt) {
-                            p2 = r.port;
-                        }
-                        if (p1.id && p2.id) {
-                            break;
-                        }
-                    }
-                    m_linkList.append(VSPDataModel::TPortLink(
-                       {lid, //
-                        tr("Port Link %1 %2").arg(lid).arg(name),
-                        p1,
-                        p2}));
-                    continue;
-                }
-                break;
-            }
+    if (data->ports.count) {
+        m_portList.resetModel();
+        for (uint i = 0; i < data->ports.count; i++) {
+            const uint8_t pid = data->ports.list[i];
+            text << "Port item......: " << pid << Qt::endl;
+            m_portList.append(VSPDataModel::TPortItem({pid, tr("Port %1").arg(pid)}));
+            continue;
         }
     }
-    else {
+    else if (data->command == vspControlRemovePort) {
         m_portList.resetModel();
+    }
+
+    if (data->links.count) {
+        m_linkList.resetModel();
+        for (uint i = 0; i < data->links.count; i++) {
+            const uint8_t lid = (data->links.list[i] >> 16) & 0x000000ff;
+            const uint8_t src = (data->links.list[i] >> 8) & 0x000000ff;
+            const uint8_t tgt = (data->links.list[i]) & 0x000000ff;
+            VSPDataModel::TPortItem p1 = {};
+            VSPDataModel::TPortItem p2 = {};
+            QString name = tr("[Port A: %1 <-> Port B: %2]").arg(src).arg(tgt);
+            text << "Link item......: " << lid << " " << name << Qt::endl;
+            for (int i = 0; i < m_portList.rowCount(); i++) {
+                VSPDataModel::TDataRecord r = m_portList.at(i).value<VSPDataModel::TDataRecord>();
+                if (r.port.id == src) {
+                    p1 = r.port;
+                }
+                if (r.port.id == tgt) {
+                    p2 = r.port;
+                }
+                if (p1.id && p2.id) {
+                    break;
+                }
+            }
+            m_linkList.append(VSPDataModel::TPortLink(
+               {lid, //
+                tr("Port Link %1 %2").arg(lid).arg(name),
+                p1,
+                p2}));
+            continue;
+        }
+    }
+    else if (data->command == vspControlUnlinkPorts) {
         m_linkList.resetModel();
     }
 
