@@ -8,7 +8,16 @@
 
 VSPDriverClient::VSPDriverClient(QObject* parent)
     : QObject(parent)
+    , VSPController()
+    , VSPDriverSetup()
+    , m_portList(this)
+    , m_linkList(this)
 {
+}
+
+VSPDriverClient::~VSPDriverClient()
+{
+    //
 }
 
 void VSPDriverClient::OnConnected()
@@ -19,6 +28,25 @@ void VSPDriverClient::OnConnected()
 void VSPDriverClient::OnDisconnected()
 {
     emit disconnected();
+}
+
+void VSPDriverClient::OnDataReady(void*)
+{
+}
+
+void VSPDriverClient::OnDidFailWithError(uint32_t code, const char* message)
+{
+    emit didFailWithError(code, message);
+}
+
+void VSPDriverClient::OnDidFinishWithResult(uint32_t code, const char* message)
+{
+    emit didFinishWithResult(code, message);
+}
+
+void VSPDriverClient::OnNeedsUserApproval()
+{
+    emit needsUserApproval();
 }
 
 void VSPDriverClient::OnIOUCCallback(int result, void* args, uint32_t size)
@@ -61,7 +89,9 @@ void VSPDriverClient::OnIOUCCallback(int result, void* args, uint32_t size)
         }
     }
     else if (data->command == vspControlRemovePort) {
-        m_portList.resetModel();
+        if (m_portList.rowCount() > 0) {
+            m_portList.resetModel();
+        }
     }
 
     if (data->links.count) {
@@ -95,7 +125,9 @@ void VSPDriverClient::OnIOUCCallback(int result, void* args, uint32_t size)
         }
     }
     else if (data->command == vspControlUnlinkPorts) {
-        m_linkList.resetModel();
+        if (m_linkList.rowCount() > 0) {
+            m_linkList.resetModel();
+        }
     }
 
     // Overlay-Größe anpassen
@@ -115,8 +147,4 @@ void VSPDriverClient::OnIOUCCallback(int result, void* args, uint32_t size)
 void VSPDriverClient::OnErrorOccured(int error, const char* message)
 {
     emit errorOccured(error, message);
-}
-
-void VSPDriverClient::OnDataReady(void* /*data internal VSP data struct*/)
-{
 }

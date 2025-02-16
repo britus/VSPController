@@ -1,7 +1,8 @@
 #pragma once
-#include "vspdatamodel.h"
 #include <QObject>
-#include <VSPController.hpp>
+#include <VSPDriverSetup.hpp>
+#include <vspcontroller.hpp>
+#include <vspdatamodel.h>
 
 #define kIOErrorNotFound -536870160
 
@@ -72,7 +73,7 @@ typedef struct {
 
 } TVSPControllerData;
 
-class VSPDriverClient: public QObject, public VSPController
+class VSPDriverClient: public QObject, public VSPController, public VSPDriverSetup
 {
     Q_OBJECT
 
@@ -143,6 +144,7 @@ public:
     } TVSPControllerData;
 
     VSPDriverClient(QObject* parent = nullptr);
+    virtual ~VSPDriverClient();
 
     inline VSPPortListModel* portList()
     {
@@ -154,6 +156,11 @@ public:
         return &m_linkList;
     }
 
+    // Interface VSPSetup.framework
+    void OnDidFailWithError(uint32_t /*code*/, const char* /*message*/) override;
+    void OnDidFinishWithResult(uint32_t /*code*/, const char* /*message*/) override;
+    void OnNeedsUserApproval() override;
+
 signals:
     void connected();
     void disconnected();
@@ -161,8 +168,12 @@ signals:
     void updateStatusLog(const QByteArray& message);
     void updateButtons(bool enabled = false);
     void complete();
+    void didFailWithError(uint32_t code, const char* message);
+    void didFinishWithResult(uint32_t code, const char* message);
+    void needsUserApproval();
 
 protected:
+    // Interface VSPController.framework
     void OnConnected() override;
     void OnDisconnected() override;
     void OnIOUCCallback(int result, void* args, uint32_t numArgs) override;

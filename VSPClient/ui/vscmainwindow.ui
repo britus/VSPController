@@ -1,17 +1,17 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <ui version="4.0">
- <class>VSPControllerWindow</class>
- <widget class="QMainWindow" name="VSPControllerWindow">
+ <class>VSCMainWindow</class>
+ <widget class="QMainWindow" name="VSCMainWindow">
   <property name="geometry">
    <rect>
     <x>0</x>
     <y>0</y>
     <width>604</width>
-    <height>465</height>
+    <height>493</height>
    </rect>
   </property>
   <property name="windowTitle">
-   <string>VSP Driver - Controller</string>
+   <string>Virtual Serial Port Controller</string>
   </property>
   <property name="documentMode">
    <bool>true</bool>
@@ -423,16 +423,16 @@
   <connection>
    <sender>btn10Close</sender>
    <signal>clicked()</signal>
-   <receiver>VSPControllerWindow</receiver>
+   <receiver>VSCMainWindow</receiver>
    <slot>close()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>98</x>
-     <y>347</y>
+     <x>86</x>
+     <y>365</y>
     </hint>
     <hint type="destinationlabel">
-     <x>336</x>
-     <y>228</y>
+     <x>301</x>
+     <y>246</y>
     </hint>
    </hints>
   </connection>

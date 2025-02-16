@@ -18,7 +18,7 @@ QPushButton* PGChecks::button()
     return ui->btnUpdate;
 }
 
-void PGChecks::setModel(VSPDataModel* model)
+void PGChecks::setModel(VSPDataModel* /*model*/)
 {
 #if 0
     if (!property("isConnected").toBool()) {

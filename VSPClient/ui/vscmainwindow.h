@@ -1,24 +1,24 @@
 #pragma once
-#include "vspdatamodel.h"
-#include "vspdriverclient.h"
 #include <QMainWindow>
 #include <QPushButton>
+#include <vspdatamodel.h>
+#include <vspdriverclient.h>
 
 QT_BEGIN_NAMESPACE
 
 namespace Ui {
-class VSPControllerWindow;
+class VSCMainWindow;
 }
 
 QT_END_NAMESPACE
 
-class VSPControllerWindow: public QMainWindow
+class VSCMainWindow: public QMainWindow
 {
     Q_OBJECT
 
 public:
-    VSPControllerWindow(QWidget* parent = nullptr);
-    ~VSPControllerWindow();
+    VSCMainWindow(QWidget* parent = nullptr);
+    ~VSCMainWindow();
 
 private slots:
     void onClientConnected();
@@ -27,6 +27,11 @@ private slots:
     void onUpdateStatusLog(const QByteArray& message);
     void onUpdateButtons(bool enabled = false);
     void onComplete();
+
+    void onSetupFailWithError(uint32_t code, const char* message);
+    void onSetupFinishWithResult(uint32_t code, const char* message);
+    void onSetupNeedsUserApproval();
+
     void onActionSPCreate();
     void onActionSPRemove();
     void onActionLKCreate();
@@ -55,7 +60,7 @@ protected slots:
     virtual void updateOverlayGeometry();
 
 private:
-    Ui::VSPControllerWindow* ui;
+    Ui::VSCMainWindow* ui;
     VSPDriverClient* m_vsp;
 
     inline void resetDefaultButton(QWidget* view);

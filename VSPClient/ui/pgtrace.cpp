@@ -18,7 +18,7 @@ QPushButton* PGTrace::button()
     return ui->btnUpdate;
 }
 
-void PGTrace::setModel(VSPDataModel* model)
+void PGTrace::setModel(VSPDataModel* /*model*/)
 {
 #if 0
     if (!property("isConnected").toBool()) {
