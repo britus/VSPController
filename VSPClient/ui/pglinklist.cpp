@@ -1,12 +1,22 @@
-#include "pglinklist.h"
+// ********************************************************************
+// pglinklist.cpp - Shows active port links
+//
+// Copyright © 2025 by EoF Software Labs
+// Copyright © 2024 Apple Inc. (some copied parts)
+// SPDX-License-Identifier: MIT
+// ********************************************************************
 #include "ui_pglinklist.h"
 #include <QTimer>
+#include <pglinklist.h>
+#include <vspabstractpage.h>
 
 PGLinkList::PGLinkList(QWidget* parent)
-    : QWidget(parent)
+    : VSPAbstractPage(parent)
     , ui(new Ui::PGLinkList)
 {
     ui->setupUi(this);
+
+    connectButton(ui->btnRefresh);
 }
 
 PGLinkList::~PGLinkList()
@@ -14,17 +24,18 @@ PGLinkList::~PGLinkList()
     delete ui;
 }
 
-QPushButton* PGLinkList::button()
+void PGLinkList::onActionExecute()
 {
-    return ui->btnRefresh;
+    emit execute(TVSPControlCommand::vspControlGetLinkList, {});
 }
 
-void PGLinkList::setModel(VSPDataModel* model)
+void PGLinkList::update(TVSPControlCommand command, VSPPortListModel* portModel, VSPLinkListModel* linkModel)
 {
-    ui->tableView->setModel(model);
+    Q_UNUSED(command);
+    Q_UNUSED(portModel);
 
-    QTimer::singleShot(50, this, [this, model]() {
-        for (int i = 0; i < model->columnCount(); i++) {
+    QTimer::singleShot(50, this, [this, linkModel]() {
+        for (int i = 0; i < linkModel->columnCount(); i++) {
             switch (i) {
                 case 0: {
                     ui->tableView->setColumnWidth(i, 40);
@@ -45,4 +56,6 @@ void PGLinkList::setModel(VSPDataModel* model)
             }
         }
     });
+
+    ui->tableView->setModel(linkModel);
 }

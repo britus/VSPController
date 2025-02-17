@@ -1,7 +1,14 @@
-#include "vspdriverclient.h"
+// ********************************************************************
+// vspdriverclient.cpp - VSPDriver user client interface
+//
+// Copyright © 2025 by EoF Software Labs
+// Copyright © 2024 Apple Inc. (some copied parts)
+// SPDX-License-Identifier: MIT
+// ********************************************************************
 #include <QDebug>
 #include <QTextStream>
 #include <QTimer>
+#include <vspdriverclient.h>
 
 #define MAX_SERIAL_PORTS 16
 #define MAX_PORT_LINKS   8
@@ -30,10 +37,6 @@ void VSPDriverClient::OnDisconnected()
     emit disconnected();
 }
 
-void VSPDriverClient::OnDataReady(void*)
-{
-}
-
 void VSPDriverClient::OnDidFailWithError(uint32_t code, const char* message)
 {
     emit didFailWithError(code, message);
@@ -49,6 +52,12 @@ void VSPDriverClient::OnNeedsUserApproval()
     emit needsUserApproval();
 }
 
+// called in sync of request
+void VSPDriverClient::OnDataReady(void*)
+{
+}
+
+// called async of request
 void VSPDriverClient::OnIOUCCallback(int result, void* args, uint32_t size)
 {
     const TVSPControllerData* data = (TVSPControllerData*) (args);
@@ -97,19 +106,19 @@ void VSPDriverClient::OnIOUCCallback(int result, void* args, uint32_t size)
     if (data->links.count) {
         m_linkList.resetModel();
         for (uint i = 0; i < data->links.count; i++) {
-            const uint8_t lid = (data->links.list[i] >> 16) & 0x000000ff;
-            const uint8_t src = (data->links.list[i] >> 8) & 0x000000ff;
-            const uint8_t tgt = (data->links.list[i]) & 0x000000ff;
+            const uint8_t _lid = (data->links.list[i] >> 16) & 0x000000ff;
+            const uint8_t _src = (data->links.list[i] >> 8) & 0x000000ff;
+            const uint8_t _tgt = (data->links.list[i]) & 0x000000ff;
             VSPDataModel::TPortItem p1 = {};
             VSPDataModel::TPortItem p2 = {};
-            QString name = tr("[Port A: %1 <-> Port B: %2]").arg(src).arg(tgt);
-            text << "Link item......: " << lid << " " << name << Qt::endl;
+            QString name = tr("[Port A: %1 <-> Port B: %2]").arg(_src).arg(_tgt);
+            text << "Link item......: " << _lid << " " << name << Qt::endl;
             for (int i = 0; i < m_portList.rowCount(); i++) {
                 VSPDataModel::TDataRecord r = m_portList.at(i).value<VSPDataModel::TDataRecord>();
-                if (r.port.id == src) {
+                if (r.port.id == _src) {
                     p1 = r.port;
                 }
-                if (r.port.id == tgt) {
+                if (r.port.id == _tgt) {
                     p2 = r.port;
                 }
                 if (p1.id && p2.id) {
@@ -117,8 +126,8 @@ void VSPDriverClient::OnIOUCCallback(int result, void* args, uint32_t size)
                 }
             }
             m_linkList.append(VSPDataModel::TPortLink(
-               {lid, //
-                tr("Port Link %1 %2").arg(lid).arg(name),
+               {_lid, //
+                tr("Port Link %1 %2").arg(_lid).arg(name),
                 p1,
                 p2}));
             continue;
@@ -132,12 +141,16 @@ void VSPDriverClient::OnIOUCCallback(int result, void* args, uint32_t size)
 
     // Overlay-Größe anpassen
     QTimer* t = new QTimer(this);
-    connect(t, &QTimer::timeout, this, [this, txStatus, buffer, result]() {
+    connect(t, &QTimer::timeout, this, [this, txStatus, buffer, data, result]() {
         emit updateStatusLog(buffer);
         emit updateButtons(true);
         if (result != 0) {
             emit errorOccured(result, txStatus);
         }
+        emit commandResult(                                //
+           static_cast<TVSPControlCommand>(data->command), //
+           &m_portList,
+           &m_linkList);
         emit complete();
     });
     t->setSingleShot(true);

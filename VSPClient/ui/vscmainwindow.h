@@ -1,6 +1,14 @@
+// ********************************************************************
+// vscmainwindow.h - Application window
+//
+// Copyright © 2025 by EoF Software Labs
+// Copyright © 2024 Apple Inc. (some copied parts)
+// SPDX-License-Identifier: MIT
+// ********************************************************************
 #pragma once
 #include <QMainWindow>
 #include <QPushButton>
+#include <vspabstractpage.h>
 #include <vspdatamodel.h>
 #include <vspdriverclient.h>
 
@@ -26,32 +34,15 @@ private slots:
     void onClientError(int error, const QString& message);
     void onUpdateStatusLog(const QByteArray& message);
     void onUpdateButtons(bool enabled = false);
+    void onCommandResult(TVSPControlCommand command, VSPPortListModel* portModel, VSPLinkListModel* linkModel);
     void onComplete();
 
     void onSetupFailWithError(uint32_t code, const char* message);
     void onSetupFinishWithResult(uint32_t code, const char* message);
     void onSetupNeedsUserApproval();
 
-    void onActionSPCreate();
-    void onActionSPRemove();
-    void onActionLKCreate();
-    void onActionLKRemove();
-    void onActionPortList();
-    void onActionLinkList();
-    void onActionEditChecks();
-    void onActionEditTraces();
-    void onActionVspConnect();
-
-    void on_btn01SPCreate_clicked();
-    void on_btn02SPRemove_clicked();
-    void on_btn03LKCreate_clicked();
-    void on_btn04LKRemove_clicked();
-    void on_btn05PortList_clicked();
-    void on_btn06LinkList_clicked();
-    void on_btn07Checks_clicked();
-    void on_btn08Traces_clicked();
-    void on_btn09Connect_clicked();
-    void on_btn10Close_clicked();
+    void onSelectPage();
+    void onActionExecute(const TVSPControlCommand command, const QVariant& data);
 
 protected:
     void resizeEvent(QResizeEvent* event) override;
@@ -62,7 +53,9 @@ protected slots:
 private:
     Ui::VSCMainWindow* ui;
     VSPDriverClient* m_vsp;
+    QMap<QPushButton*, VSPAbstractPage*> m_buttonMap;
 
+private:
     inline void resetDefaultButton(QWidget* view);
     inline void enableDefaultButton(QPushButton* button);
     inline void disableDefaultButton(QPushButton* button);

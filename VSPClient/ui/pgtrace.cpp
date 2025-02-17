@@ -1,11 +1,21 @@
-#include "pgtrace.h"
+// ********************************************************************
+// pgtrace.cpp - Enable/Disable OS log traces
+//
+// Copyright © 2025 by EoF Software Labs
+// Copyright © 2024 Apple Inc. (some copied parts)
+// SPDX-License-Identifier: MIT
+// ********************************************************************
 #include "ui_pgtrace.h"
+#include <pgtrace.h>
+#include <vspabstractpage.h>
 
 PGTrace::PGTrace(QWidget* parent)
-    : QWidget(parent)
+    : VSPAbstractPage(parent)
     , ui(new Ui::PGTrace)
 {
     ui->setupUi(this);
+
+    connectButton(ui->btnUpdate);
 }
 
 PGTrace::~PGTrace()
@@ -13,23 +23,23 @@ PGTrace::~PGTrace()
     delete ui;
 }
 
-QPushButton* PGTrace::button()
+void PGTrace::onActionExecute()
 {
-    return ui->btnUpdate;
+    // const VSPDataModel::TPortItem p = seletion();
+    // emit VSPAbstractPage::execute(vspControlEnableChecks, QVariant::fromValue(p));
 }
 
-void PGTrace::setModel(VSPDataModel* /*model*/)
+void PGTrace::update(TVSPControlCommand command, VSPPortListModel* portModel, VSPLinkListModel* linkModel)
 {
 #if 0
-    if (!property("isConnected").toBool()) {
-        setProperty("isConnected", true);
-        connect(model, &QAbstractTableModel::modelReset, this, [this, model]() {
-            ui->cbPorts->clear();
-            for (int i = 0; i < model->rowCount(); i++) {
-                VSPDataModel::TDataRecord r = model->at(i).value<VSPDataModel::TDataRecord>();
-                ui->cbPorts->addItem(r.port.name, QVariant::fromValue(r.port));
-            }
-        });
+    ui->cbPorts->clear();
+    for (int i = 0; i < portModel->rowCount(); i++) {
+        VSPDataModel::TDataRecord r = portModel->at(i).value<VSPDataModel::TDataRecord>();
+        ui->cbPorts->addItem(r.port.name, QVariant::fromValue(r.port));
     }
+#else
+    Q_UNUSED(command);
+    Q_UNUSED(portModel);
+    Q_UNUSED(linkModel);
 #endif
 }

@@ -1,30 +1,37 @@
+// ********************************************************************
+// pgspcreate.h - Create serial port instance
+//
+// Copyright © 2025 by EoF Software Labs
+// Copyright © 2024 Apple Inc. (some copied parts)
+// SPDX-License-Identifier: MIT
+// ********************************************************************
 #pragma once
 
-#include "vspdatamodel.h"
 #include <QComboBox>
 #include <QPushButton>
 #include <QSerialPort>
 #include <QSerialPortInfo>
 #include <QWidget>
+#include <vspabstractpage.h>
+#include <vspdatamodel.h>
+#include <vspdriverclient.h>
 
 namespace Ui {
 class PGSPCreate;
 }
 
-class PGSPCreate: public QWidget
+class PGSPCreate: public VSPAbstractPage
 {
     Q_OBJECT
 
 public:
     explicit PGSPCreate(QWidget* parent = nullptr);
     ~PGSPCreate();
-    QPushButton* button();
-    void setModel(VSPDataModel* model);
-    QSerialPort::BaudRate baudRate() const;
-    QSerialPort::DataBits dataBits() const;
-    QSerialPort::StopBits stopBits() const;
-    QSerialPort::Parity parity() const;
-    QSerialPort::FlowControl flowCtrl() const;
+
+    void update(TVSPControlCommand command, VSPPortListModel* portModel, VSPLinkListModel* linkModel) override;
+
+protected:
+    void onActionExecute() override;
 
 private:
     Ui::PGSPCreate* ui;
@@ -36,4 +43,10 @@ private:
     inline void initComboStopBits(QComboBox* cbx, QComboBox* link = nullptr);
     inline void initComboParity(QComboBox* cbx, QComboBox* link = nullptr);
     inline void initComboFlowCtrl(QComboBox* cbx, QComboBox* link = nullptr);
+
+    inline QSerialPort::BaudRate baudRate() const;
+    inline QSerialPort::DataBits dataBits() const;
+    inline QSerialPort::StopBits stopBits() const;
+    inline QSerialPort::Parity parity() const;
+    inline QSerialPort::FlowControl flowCtrl() const;
 };

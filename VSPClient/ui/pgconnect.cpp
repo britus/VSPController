@@ -1,11 +1,21 @@
-#include "pgconnect.h"
+// ********************************************************************
+// pgconnect.cpp - Connect VSPDriver user client interface
+//
+// Copyright © 2025 by EoF Software Labs
+// Copyright © 2024 Apple Inc. (some copied parts)
+// SPDX-License-Identifier: MIT
+// ********************************************************************
 #include "ui_pgconnect.h"
+#include <pgconnect.h>
+#include <vspabstractpage.h>
 
 PGConnect::PGConnect(QWidget* parent)
-    : QWidget(parent)
+    : VSPAbstractPage(parent)
     , ui(new Ui::PGConnect)
 {
     ui->setupUi(this);
+
+    connectButton(ui->btnConnect);
 }
 
 PGConnect::~PGConnect()
@@ -13,7 +23,14 @@ PGConnect::~PGConnect()
     delete ui;
 }
 
-QPushButton* PGConnect::button()
+void PGConnect::onActionExecute()
 {
-    return ui->btnConnect;
-};
+    emit VSPAbstractPage::execute(vspControlPingPong, {});
+}
+
+void PGConnect::update(TVSPControlCommand command, VSPPortListModel* portModel, VSPLinkListModel* linkModel)
+{
+    Q_UNUSED(command);
+    Q_UNUSED(portModel);
+    Q_UNUSED(linkModel);
+}

@@ -32,7 +32,7 @@ OBJECTIVE_HEADERS += $$PWD/VSPSmLoader.h
 OBJECTIVE_HEADERS += $$PWD/VSPSetup.h
 
 DISTFILES += \
-	Info.plist
+    Info.plist
 
 QMAKE_CFLAGS += -mmacosx-version-min=12.2
 QMAKE_CXXFLAGS += -mmacosx-version-min=12.2
@@ -42,7 +42,6 @@ QMAKE_CXXFLAGS += -ggdb3
 
 QMAKE_LFLAGS_SONAME = -Wl,-install_name,@executable_path/../Frameworks/
 
-QMAKE_MAC_SDK = macosx13.1
 QMAKE_PROJECT_NAME = VSPSetup
 QMAKE_FRAMEWORK_BUNDLE_NAME = VSPSetup
 QMAKE_FRAMEWORK_VERSION = 1.0

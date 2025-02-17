@@ -21,15 +21,15 @@ DEFINES += QT_DISABLE_DEPRECATED_BEFORE=0x060000
 DEFINES += VSP_DEBUG
 
 SOURCES += \
-	vspcontroller.cpp
+    vspcontroller.cpp
 
 HEADERS += \
-	vspcontroller.hpp \
-	vspcontrollerpriv.hpp \
-	vspcontroller_global.h
+    vspcontroller.hpp \
+    vspcontrollerpriv.hpp \
+    vspcontroller_global.h
 
 DISTFILES += \
-	Info.plist
+    Info.plist
 
 QMAKE_CFLAGS   += -mmacosx-version-min=12.2
 QMAKE_CXXFLAGS += -mmacosx-version-min=12.2
@@ -39,7 +39,6 @@ QMAKE_CXXFLAGS += -ggdb3
 
 QMAKE_LFLAGS_SONAME = -Wl,-install_name,@executable_path/../Frameworks/
 
-QMAKE_MAC_SDK = macosx13.1
 QMAKE_PROJECT_NAME = VSPController
 QMAKE_FRAMEWORK_BUNDLE_NAME = VSPController
 QMAKE_FRAMEWORK_VERSION = 1.0

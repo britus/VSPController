@@ -14,7 +14,8 @@ SOURCES += \
 	$$PWD/pgspcreate.cpp \
 	$$PWD/pgspremove.cpp \
 	$$PWD/pgtrace.cpp \
-	$$PWD/vscmainwindow.cpp
+	$$PWD/vscmainwindow.cpp \
+	$$PWD/vspabstractpage.cpp
 
 HEADERS += \
 	$$PWD/pgchecks.h \
@@ -26,7 +27,8 @@ HEADERS += \
 	$$PWD/pgspcreate.h \
 	$$PWD/pgspremove.h \
 	$$PWD/pgtrace.h \
-	$$PWD/vscmainwindow.h
+	$$PWD/vscmainwindow.h \
+	$$PWD/vspabstractpage.h
 
 FORMS += \
 	$$PWD/pgchecks.ui \

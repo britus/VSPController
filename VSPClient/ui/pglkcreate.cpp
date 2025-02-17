@@ -1,11 +1,21 @@
-#include "pglkcreate.h"
+// ********************************************************************
+// pglkcreate.cpp - Create a port link
+//
+// Copyright © 2025 by EoF Software Labs
+// Copyright © 2024 Apple Inc. (some copied parts)
+// SPDX-License-Identifier: MIT
+// ********************************************************************
 #include "ui_pglkcreate.h"
+#include <pglkcreate.h>
+#include <vspabstractpage.h>
 
 PGLKCreate::PGLKCreate(QWidget* parent)
-    : QWidget(parent)
+    : VSPAbstractPage(parent)
     , ui(new Ui::PGLKCreate)
 {
     ui->setupUi(this);
+
+    connectButton(ui->btnLinkPorts);
 }
 
 PGLKCreate::~PGLKCreate()
@@ -13,34 +23,53 @@ PGLKCreate::~PGLKCreate()
     delete ui;
 }
 
-QPushButton* PGLKCreate::button()
+void PGLKCreate::onActionExecute()
 {
-    return ui->btnLinkPorts;
+    VSPDataModel::TPortLink link = {
+       .id = 0,
+       .name = "<new>",
+       .source = selection1(),
+       .target = selection2(),
+    };
+    emit execute(vspControlLinkPorts, QVariant::fromValue(link));
 }
 
-void PGLKCreate::setModel(const VSPDataModel* model)
+void PGLKCreate::update(TVSPControlCommand command, VSPPortListModel* portModel, VSPLinkListModel* linkModel)
 {
-    if (!property("isConnected").toBool()) {
-        setProperty("isConnected", true);
-        connect(model, &QAbstractTableModel::modelReset, this, [this, model]() {
-            ui->cbPort1->clear();
-            ui->cbPort2->clear();
+    Q_UNUSED(command);
 
-            for (int i = 0; i < model->rowCount(); i++) {
-                VSPDataModel::TDataRecord r = model->at(i).value<VSPDataModel::TDataRecord>();
-                ui->cbPort1->addItem(r.port.name, QVariant::fromValue(r.port));
-                ui->cbPort2->addItem(r.port.name, QVariant::fromValue(r.port));
-            }
+    QList<quint8> linkedPorts;
 
-            const bool enab =              //
-               ui->cbPort1->count() > 0 && //
-               ui->cbPort2->count() > 0;
+    ui->cbPort1->clear();
+    ui->cbPort2->clear();
 
-            ui->cbPort1->setEnabled(enab);
-            ui->cbPort2->setEnabled(enab);
-            ui->btnLinkPorts->setEnabled(enab);
-        });
+    // load port IDs already linked
+    for (int i = 0; i < linkModel->rowCount(); i++) {
+        VSPDataModel::TDataRecord r = linkModel->at(i).value<VSPDataModel::TDataRecord>();
+        if (!linkedPorts.contains(r.link.source.id)) {
+            linkedPorts.append(r.link.source.id);
+        }
+        if (!linkedPorts.contains(r.link.target.id)) {
+            linkedPorts.append(r.link.target.id);
+        }
     }
+
+    // load port IDs into comboboxes and skip already linked ports
+    for (int i = 0; i < portModel->rowCount(); i++) {
+        VSPDataModel::TDataRecord r = portModel->at(i).value<VSPDataModel::TDataRecord>();
+        if (!linkedPorts.contains(r.port.id)) {
+            ui->cbPort1->addItem(r.port.name, QVariant::fromValue(r.port));
+            ui->cbPort2->addItem(r.port.name, QVariant::fromValue(r.port));
+        }
+    }
+
+    const bool enab =              //
+       ui->cbPort1->count() > 0 && //
+       ui->cbPort2->count() > 0;
+
+    ui->cbPort1->setEnabled(enab);
+    ui->cbPort2->setEnabled(enab);
+    ui->btnLinkPorts->setEnabled(enab);
 }
 
 VSPDataModel::TPortItem PGLKCreate::selection1() const

@@ -33,17 +33,18 @@ include(model/model.pri)
 include(ui/ui.pri)
 
 SOURCES += \
-	main.cpp \
+    main.cpp \
 
 RESOURCES += \
-	vspui.qrc
+    vspui.qrc
 
 TRANSLATIONS += \
-	vspui_en_US.ts
+    vspui_en_US.ts
 
 DISTFILES += \
-	LICENSE.txt \
-	README.md
+    LICENSE.txt \
+    README.md \
+    VSPClient.entitlements
 
 INCLUDEPATH += $$PWD/../VSPController
 DEPENDPATH += $$PWD/../VSPController
@@ -51,10 +52,11 @@ DEPENDPATH += $$PWD/../VSPController
 INCLUDEPATH += $$PWD/../VSPSetup
 DEPENDPATH += $$PWD/../VSPSetup
 
-QMAKE_MAC_SDK = macosx13.1
 QMAKE_PROJECT_NAME = VSPClient
 QMAKE_MACOSX_DEPLOYMENT_TARGET = 12.2
-QMAKE_INFO_PLIST = $$PWD/Info.plist
+QMAKE_INFO_PLIST += \
+    $$PWD/Info.plist
+    $$PWD/VSPClient.entitlements
 
 QMAKE_CODE_SIGN_ENTITLEMENTS = $$PWD/VSPClient.entitlements
 QMAKE_CODE_SIGN_IDENTITY = 83NQU389JN
@@ -70,14 +72,14 @@ QMAKE_BUNDLE_DATA += LICENSE
 
 frameworks.clear
 frameworks.files = \
-	$$OUT_PWD/../vspcontroller/VSPController.framework \
-	$$OUT_PWD/../vspsetup/VSPSetup.framework
+    $$OUT_PWD/../vspcontroller/VSPController.framework \
+    $$OUT_PWD/../vspsetup/VSPSetup.framework
 frameworks.path = Contents/Frameworks
 QMAKE_BUNDLE_DATA += frameworks
 
 vspdext.clear
 vspdext.files = \
-	$$PWD/Library/SystemExtensions/org.eof.tools.VSPDriver.dext
+    $$PWD/Library/SystemExtensions/org.eof.tools.VSPDriver.dext
 vspdext.path = Contents/Library/SystemExtensions
 QMAKE_BUNDLE_DATA += vspdext
 

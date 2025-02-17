@@ -1,11 +1,21 @@
-#include "pglkremove.h"
+// ********************************************************************
+// pglkremove.cpp - Remove selected port link
+//
+// Copyright © 2025 by EoF Software Labs
+// Copyright © 2024 Apple Inc. (some copied parts)
+// SPDX-License-Identifier: MIT
+// ********************************************************************
 #include "ui_pglkremove.h"
+#include <pglkremove.h>
+#include <vspabstractpage.h>
 
 PGLKRemove::PGLKRemove(QWidget* parent)
-    : QWidget(parent)
+    : VSPAbstractPage(parent)
     , ui(new Ui::PGLKRemove)
 {
     ui->setupUi(this);
+
+    connectButton(ui->btnUnlink);
 }
 
 PGLKRemove::~PGLKRemove()
@@ -13,27 +23,27 @@ PGLKRemove::~PGLKRemove()
     delete ui;
 }
 
-QPushButton* PGLKRemove::button()
+void PGLKRemove::onActionExecute()
 {
-    return ui->btnUnlink;
-};
+    const VSPDataModel::TPortLink l = selection();
+    emit execute(vspControlLinkPorts, QVariant::fromValue(l));
+}
 
-void PGLKRemove::setModel(const VSPDataModel* model)
+void PGLKRemove::update(TVSPControlCommand command, VSPPortListModel* portModel, VSPLinkListModel* linkModel)
 {
-    if (!property("isConnected").toBool()) {
-        setProperty("isConnected", true);
-        connect(model, &QAbstractTableModel::modelReset, this, [this, model]() {
-            ui->comboBox->clear();
+    Q_UNUSED(command);
+    Q_UNUSED(portModel);
 
-            for (int i = 0; i < model->rowCount(); i++) {
-                VSPDataModel::TDataRecord r = model->at(i).value<VSPDataModel::TDataRecord>();
-                ui->comboBox->addItem(r.link.name, QVariant::fromValue(r.link));
-            }
+    ui->comboBox->clear();
 
-            ui->comboBox->setEnabled(ui->comboBox->count() > 0);
-            ui->btnUnlink->setEnabled(ui->comboBox->count() > 0);
-        });
+    for (int i = 0; i < linkModel->rowCount(); i++) {
+        VSPDataModel::TDataRecord r = //
+           linkModel->at(i).value<VSPDataModel::TDataRecord>();
+        ui->comboBox->addItem(r.link.name, QVariant::fromValue(r.link));
     }
+
+    ui->comboBox->setEnabled(ui->comboBox->count() > 0);
+    ui->btnUnlink->setEnabled(ui->comboBox->count() > 0);
 }
 
 VSPDataModel::TPortLink PGLKRemove::selection() const

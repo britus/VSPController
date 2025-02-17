@@ -1,11 +1,21 @@
-#include "pgspremove.h"
+// ********************************************************************
+// pgspremove.cpp - Remove active serial port instance
+//
+// Copyright © 2025 by EoF Software Labs
+// Copyright © 2024 Apple Inc. (some copied parts)
+// SPDX-License-Identifier: MIT
+// ********************************************************************
 #include "ui_pgspremove.h"
+#include <pgspremove.h>
+#include <vspabstractpage.h>
 
 PGSPRemove::PGSPRemove(QWidget* parent)
-    : QWidget(parent)
+    : VSPAbstractPage(parent)
     , ui(new Ui::PGSPRemove)
 {
     ui->setupUi(this);
+
+    connectButton(ui->btnDoSPRemove);
 }
 
 PGSPRemove::~PGSPRemove()
@@ -13,26 +23,26 @@ PGSPRemove::~PGSPRemove()
     delete ui;
 }
 
-QPushButton* PGSPRemove::button()
+void PGSPRemove::onActionExecute()
 {
-    return ui->btnDoSPRemove;
+    const VSPDataModel::TPortItem p = selection();
+    emit VSPAbstractPage::execute(vspControlEnableChecks, QVariant::fromValue(p));
 }
 
-void PGSPRemove::setModel(const VSPDataModel* model)
+void PGSPRemove::update(TVSPControlCommand command, VSPPortListModel* portModel, VSPLinkListModel* linkModel)
 {
-    if (!property("isConnected").toBool()) {
-        setProperty("isConnected", true);
-        connect(model, &QAbstractTableModel::modelReset, this, [this, model]() {
-            ui->cbSerialPorts->clear();
-            for (int i = 0; i < model->rowCount(); i++) {
-                VSPDataModel::TDataRecord r = model->at(i).value<VSPDataModel::TDataRecord>();
-                ui->cbSerialPorts->addItem(r.port.name, QVariant::fromValue(r.port));
-            }
-            bool enab = ui->cbSerialPorts->count() > 0;
-            ui->cbSerialPorts->setEnabled(enab);
-            ui->btnDoSPRemove->setEnabled(enab);
-        });
+    Q_UNUSED(command);
+    Q_UNUSED(linkModel);
+
+    ui->cbSerialPorts->clear();
+    for (int i = 0; i < portModel->rowCount(); i++) {
+        VSPDataModel::TDataRecord r = portModel->at(i).value<VSPDataModel::TDataRecord>();
+        ui->cbSerialPorts->addItem(r.port.name, QVariant::fromValue(r.port));
     }
+
+    bool enab = ui->cbSerialPorts->count() > 0;
+    ui->cbSerialPorts->setEnabled(enab);
+    ui->btnDoSPRemove->setEnabled(enab);
 }
 
 VSPDataModel::TPortItem PGSPRemove::selection() const

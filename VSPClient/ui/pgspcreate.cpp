@@ -1,7 +1,15 @@
-#include "pgspcreate.h"
+// ********************************************************************
+// pgspcreate.cpp - Create serial port instance
+//
+// Copyright © 2025 by EoF Software Labs
+// Copyright © 2024 Apple Inc. (some copied parts)
+// SPDX-License-Identifier: MIT
+// ********************************************************************
 #include "ui_pgspcreate.h"
 #include <QSerialPort>
 #include <QSerialPortInfo>
+#include <pgspcreate.h>
+#include <vspabstractpage.h>
 
 Q_DECLARE_METATYPE(QSerialPortInfo)
 Q_DECLARE_METATYPE(QSerialPort::BaudRate)
@@ -10,7 +18,7 @@ Q_DECLARE_METATYPE(QSerialPort::StopBits)
 Q_DECLARE_METATYPE(QSerialPort::Parity)
 
 PGSPCreate::PGSPCreate(QWidget* parent)
-    : QWidget(parent)
+    : VSPAbstractPage(parent)
     , ui(new Ui::PGSPCreate)
 {
     ui->setupUi(this);
@@ -21,6 +29,8 @@ PGSPCreate::PGSPCreate(QWidget* parent)
     initComboStopBits(ui->cbStopBits, nullptr);
     initComboParity(ui->cbParity, nullptr);
     initComboFlowCtrl(ui->cbFlowControl, nullptr);
+
+    connectButton(ui->btnDoSPCreate);
 }
 
 PGSPCreate::~PGSPCreate()
@@ -28,13 +38,24 @@ PGSPCreate::~PGSPCreate()
     delete ui;
 }
 
-QPushButton* PGSPCreate::button()
+void PGSPCreate::onActionExecute()
 {
-    return ui->btnDoSPCreate;
+    const TVSPPortParameters p = {
+       .baudRate = (uint32_t) this->baudRate(),
+       .dataBits = (uint8_t) this->dataBits(),
+       .stopBits = (uint8_t) this->stopBits(),
+       .parity = (uint8_t) this->parity(),
+       .flowCtrl = (uint8_t) this->flowCtrl(),
+    };
+
+    emit execute(vspControlCreatePort, QVariant::fromValue(p));
 }
 
-void PGSPCreate::setModel(VSPDataModel* /*model*/)
+void PGSPCreate::update(TVSPControlCommand command, VSPPortListModel* portModel, VSPLinkListModel* linkModel)
 {
+    Q_UNUSED(command);
+    Q_UNUSED(portModel);
+    Q_UNUSED(linkModel);
 }
 
 QSerialPort::BaudRate PGSPCreate::baudRate() const

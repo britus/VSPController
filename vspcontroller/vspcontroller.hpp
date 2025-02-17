@@ -9,7 +9,6 @@
 
 extern "C" {
 #define __FAVOR_BSD
-#include <inttypes.h>
 #include <stdlib.h>
 }
 

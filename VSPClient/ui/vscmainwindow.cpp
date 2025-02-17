@@ -1,17 +1,25 @@
+// ********************************************************************
+// vscmainwindow.cpp - Application window
+//
+// Copyright © 2025 by EoF Software Labs
+// Copyright © 2024 Apple Inc. (some copied parts)
+// SPDX-License-Identifier: MIT
+// ********************************************************************
 #include "ui_vscmainwindow.h"
 #include <QDebug>
 #include <QDesktopServices>
 #include <QMovie>
 #include <QTimer>
 #include <vscmainwindow.h>
+#include <vspabstractpage.h>
 
 VSCMainWindow::VSCMainWindow(QWidget* parent)
     : QMainWindow(parent)
     , ui(new Ui::VSCMainWindow)
     , m_vsp(nullptr)
+    , m_buttonMap()
 {
     ui->setupUi(this);
-    ui->stackedWidget->setCurrentWidget(ui->pg09Connect);
 
     m_vsp = new VSPDriverClient(this);
     connect(m_vsp, &VSPDriverClient::didFailWithError, this, &VSCMainWindow::onSetupFailWithError);
@@ -22,37 +30,34 @@ VSCMainWindow::VSCMainWindow(QWidget* parent)
     connect(m_vsp, &VSPDriverClient::errorOccured, this, &VSCMainWindow::onClientError);
     connect(m_vsp, &VSPDriverClient::updateStatusLog, this, &VSCMainWindow::onUpdateStatusLog);
     connect(m_vsp, &VSPDriverClient::updateButtons, this, &VSCMainWindow::onUpdateButtons);
+    connect(m_vsp, &VSPDriverClient::commandResult, this, &VSCMainWindow::onCommandResult);
     connect(m_vsp, &VSPDriverClient::complete, this, &VSCMainWindow::onComplete);
 
-    connect(ui->pg01SPCreate->button(), &QPushButton::clicked, this, &VSCMainWindow::onActionSPCreate);
-    connect(ui->pg02SPRemove->button(), &QPushButton::clicked, this, &VSCMainWindow::onActionSPRemove);
-    connect(ui->pg03LKCreate->button(), &QPushButton::clicked, this, &VSCMainWindow::onActionLKCreate);
-    connect(ui->pg04LKRemove->button(), &QPushButton::clicked, this, &VSCMainWindow::onActionLKRemove);
-    connect(ui->pg05PortList->button(), &QPushButton::clicked, this, &VSCMainWindow::onActionPortList);
-    connect(ui->pg06LinkList->button(), &QPushButton::clicked, this, &VSCMainWindow::onActionLinkList);
-    connect(ui->pg07Checks->button(), &QPushButton::clicked, this, &VSCMainWindow::onActionEditChecks);
-    connect(ui->pg08Traces->button(), &QPushButton::clicked, this, &VSCMainWindow::onActionEditTraces);
-    connect(ui->pg09Connect->button(), &QPushButton::clicked, this, &VSCMainWindow::onActionVspConnect);
+    m_buttonMap[ui->btn01SPCreate] = ui->pg01SPCreate;
+    m_buttonMap[ui->btn02SPRemove] = ui->pg02SPRemove;
+    m_buttonMap[ui->btn03LKCreate] = ui->pg03LKCreate;
+    m_buttonMap[ui->btn04LKRemove] = ui->pg04LKRemove;
+    m_buttonMap[ui->btn05PortList] = ui->pg05PortList;
+    m_buttonMap[ui->btn06LinkList] = ui->pg06LinkList;
+    m_buttonMap[ui->btn07Checks] = ui->pg07Checks;
+    m_buttonMap[ui->btn08Traces] = ui->pg08Traces;
+    m_buttonMap[ui->btn09Connect] = ui->pg09Connect;
 
-#ifdef QT_DEBUG
-    ui->btn08Traces->setVisible(true);
-#else
-    ui->btn08Traces->setVisible(false);
-#endif
+    foreach (auto page, m_buttonMap.values()) {
+        connect(page, &VSPAbstractPage::execute, this, &VSCMainWindow::onActionExecute);
+    }
 
-    disableButtonState(
-       QList<QPushButton*>() //
-       << ui->btn01SPCreate  //
-       << ui->btn02SPRemove  //
-       << ui->btn03LKCreate  //
-       << ui->btn04LKRemove  //
-       << ui->btn05PortList  //
-       << ui->btn06LinkList  //
-       << ui->btn07Checks    //
-       << ui->btn08Traces    //
-       << ui->btn09Connect);
+    foreach (auto button, m_buttonMap.keys()) {
+        connect(button, &QPushButton::clicked, this, &VSCMainWindow::onSelectPage);
+    }
 
-    onActionVspConnect();
+    disableButtonState(m_buttonMap.keys());
+
+    // inital show drive connection page
+    ui->stackedWidget->setCurrentWidget(ui->pg09Connect);
+
+    // try to install VSPDriver and/or connect driver UC instance
+    onActionExecute(vspControlPingPong, {});
 }
 
 VSCMainWindow::~VSCMainWindow()
@@ -141,7 +146,8 @@ void VSCMainWindow::onSetupNeedsUserApproval()
 void VSCMainWindow::onClientConnected()
 {
     qDebug("CTRLWIN::onClientConnected()\n");
-    ui->stackedWidget->setCurrentWidget(ui->pg01SPCreate);
+
+    disableButtonState(ui->btn09Connect);
     enableButtonState(
        QList<QPushButton*>() //
        << ui->btn01SPCreate  //
@@ -152,16 +158,19 @@ void VSCMainWindow::onClientConnected()
        << ui->btn06LinkList  //
        << ui->btn07Checks    //
        << ui->btn08Traces);
-    on_btn01SPCreate_clicked();
-    disableButtonState(ui->btn09Connect);
+
+    ui->stackedWidget->setCurrentWidget(ui->pg01SPCreate);
     ui->textBrowser->setPlainText("Connected.");
+
     removeOverlay();
 }
 
 void VSCMainWindow::onClientDisconnected()
 {
     qDebug("CTRLWIN::onClientDisconnected()\n");
-    ui->stackedWidget->setCurrentWidget(ui->pg09Connect);
+
+    enableButtonState(ui->btn09Connect);
+    enableDefaultButton(ui->btn09Connect);
     disableButtonState(
        QList<QPushButton*>() //
        << ui->btn01SPCreate  //
@@ -172,8 +181,8 @@ void VSCMainWindow::onClientDisconnected()
        << ui->btn06LinkList  //
        << ui->btn07Checks    //
        << ui->btn08Traces);
-    enableButtonState(ui->btn09Connect);
-    enableDefaultButton(ui->btn09Connect);
+
+    ui->stackedWidget->setCurrentWidget(ui->pg09Connect);
     ui->textBrowser->setPlainText("Disconnected.");
 }
 
@@ -206,9 +215,143 @@ void VSCMainWindow::onUpdateButtons(bool enabled)
     ui->pnlContent->setEnabled(enabled);
 }
 
+void VSCMainWindow::onCommandResult(TVSPControlCommand command, VSPPortListModel* portModel, VSPLinkListModel* linkModel)
+{
+    VSPAbstractPage* page;
+    if ((page = dynamic_cast<VSPAbstractPage*>(ui->stackedWidget->currentWidget())) == nullptr) {
+        return;
+    }
+    page->update(command, portModel, linkModel);
+}
+
 void VSCMainWindow::onComplete()
 {
     ui->stackedWidget->currentWidget()->setEnabled(true);
+    removeOverlay();
+}
+
+void VSCMainWindow::onSelectPage()
+{
+    QPushButton* button;
+
+    if (!(button = dynamic_cast<QPushButton*>(sender()))) {
+        return;
+    }
+
+    VSPAbstractPage* page;
+    if (!(page = m_buttonMap[button])) {
+        return;
+    }
+
+    // show selected page
+    ui->stackedWidget->setCurrentWidget(page);
+
+    // force data model update
+    onActionExecute(vspControlGetStatus, {});
+}
+
+void VSCMainWindow::onActionExecute(const TVSPControlCommand command, const QVariant& data)
+{
+    // VSPAbstractPage* page = ui->stackedWidget->currentWidget();
+    // int index = ui->stackedWidget->currentIndex();
+
+    showOverlay();
+
+    switch (command) {
+        case vspControlGetStatus: {
+            if (!m_vsp->GetStatus()) {
+                onClientError(0xfa000001, tr("Failed to read driver status."));
+                goto error_exit;
+            }
+            break;
+        }
+        case vspControlCreatePort: {
+            TVSPPortParameters p = data.value<TVSPPortParameters>();
+            if (!m_vsp->CreatePort(&p)) {
+                onClientError(0xfa000001, tr("Failed to create port."));
+                goto error_exit;
+            }
+            break;
+        }
+        case vspControlRemovePort: {
+            VSPDataModel::TPortItem p = data.value<VSPDataModel::TPortItem>();
+            if (!m_vsp->RemovePort(p.id)) {
+                onClientError(0xfa000001, tr("Failed to remove port."));
+                goto error_exit;
+            }
+            break;
+        }
+        case vspControlLinkPorts: {
+            VSPDataModel::TPortLink link = data.value<VSPDataModel::TPortLink>();
+            if (link.source.id == link.target.id) {
+                onClientError(0xfa000002, "You can't link same port together.");
+                goto error_exit;
+            }
+            if (!m_vsp->LinkPorts(link.source.id, link.target.id)) {
+                onClientError(0xfa000001, tr("Failed to create port link status."));
+                goto error_exit;
+            }
+            break;
+        }
+        case vspControlUnlinkPorts: {
+            VSPDataModel::TPortLink link = data.value<VSPDataModel::TPortLink>();
+            if (!m_vsp->UnlinkPorts(link.source.id, link.target.id)) {
+                onClientError(0xfa000001, tr("Failed to remove link."));
+                goto error_exit;
+            }
+            break;
+        }
+        case vspControlGetPortList: {
+            if (!m_vsp->GetPortList()) {
+                onClientError(0xfa000001, tr("Failed to get active ports."));
+                goto error_exit;
+            }
+            break;
+        }
+        case vspControlGetLinkList: {
+            if (!m_vsp->GetLinkList()) {
+                onClientError(0xfa000001, tr("Failed to get active port links."));
+                goto error_exit;
+            }
+            break;
+        }
+        case vspControlEnableChecks: {
+            VSPDataModel::TDataRecord r = data.value<VSPDataModel::TDataRecord>();
+            if (!m_vsp->EnableChecks(r.port.id)) {
+                onClientError(0xfa000001, tr("Failed to enable/disable checks."));
+                goto error_exit;
+            }
+            break;
+        }
+        case vspControlEnableTrace: {
+            VSPDataModel::TDataRecord r = data.value<VSPDataModel::TDataRecord>();
+            if (!m_vsp->EnableTrace(r.port.id)) {
+                onClientError(0xfa000001, tr("Failed to enable/disable traces."));
+                goto error_exit;
+            }
+            break;
+        }
+        case vspControlPingPong: {
+            if (!m_vsp->IsConnected() && !m_vsp->ConnectDriver()) {
+                onClientError(0xfa0000f0, "Failed to connect driver interface.");
+                QDesktopServices::openUrl(QUrl(QStringLiteral("vspinstall://")));
+                m_vsp->activateDriver();
+            }
+            else if (!m_vsp->GetStatus()) {
+                onClientError(0xfa000001, tr("Failed to read driver status."));
+                goto error_exit;
+            }
+            break;
+        }
+        default: {
+            break;
+        }
+    }
+
+    // done
+    return;
+
+error_exit:
     removeOverlay();
 }
 
@@ -303,206 +446,4 @@ inline void VSCMainWindow::disableDefaultButton(QPushButton* button)
 {
     button->setAutoDefault(false);
     button->setDefault(false);
-}
-
-void VSCMainWindow::on_btn01SPCreate_clicked()
-{
-    resetDefaultButton(ui->pnlButtons);
-    enableDefaultButton(ui->btn01SPCreate);
-    ui->stackedWidget->setCurrentWidget(ui->pg01SPCreate);
-}
-
-void VSCMainWindow::on_btn02SPRemove_clicked()
-{
-    resetDefaultButton(ui->pnlButtons);
-    enableDefaultButton(ui->btn02SPRemove);
-    ui->stackedWidget->setCurrentWidget(ui->pg02SPRemove);
-    ui->pg02SPRemove->setModel(m_vsp->portList());
-    onActionPortList();
-}
-
-void VSCMainWindow::on_btn03LKCreate_clicked()
-{
-    resetDefaultButton(ui->pnlButtons);
-    enableDefaultButton(ui->btn03LKCreate);
-    ui->stackedWidget->setCurrentWidget(ui->pg03LKCreate);
-    ui->pg03LKCreate->setModel(m_vsp->portList());
-    onActionPortList();
-}
-
-void VSCMainWindow::on_btn04LKRemove_clicked()
-{
-    resetDefaultButton(ui->pnlButtons);
-    enableDefaultButton(ui->btn04LKRemove);
-    ui->stackedWidget->setCurrentWidget(ui->pg04LKRemove);
-    ui->pg04LKRemove->setModel(m_vsp->linkList());
-    onActionLinkList();
-}
-
-void VSCMainWindow::on_btn05PortList_clicked()
-{
-    resetDefaultButton(ui->pnlButtons);
-    enableDefaultButton(ui->btn05PortList);
-    ui->stackedWidget->setCurrentWidget(ui->pg05PortList);
-    ui->pg05PortList->setModel(m_vsp->portList());
-    onActionPortList();
-}
-
-void VSCMainWindow::on_btn06LinkList_clicked()
-{
-    resetDefaultButton(ui->pnlButtons);
-    enableDefaultButton(ui->btn06LinkList);
-    ui->stackedWidget->setCurrentWidget(ui->pg06LinkList);
-    ui->pg06LinkList->setModel(m_vsp->linkList());
-    onActionLinkList();
-}
-
-void VSCMainWindow::on_btn07Checks_clicked()
-{
-    resetDefaultButton(ui->pnlButtons);
-    enableDefaultButton(ui->btn07Checks);
-    ui->stackedWidget->setCurrentWidget(ui->pg07Checks);
-    ui->pg07Checks->setModel(m_vsp->portList());
-    onActionPortList();
-}
-
-void VSCMainWindow::on_btn08Traces_clicked()
-{
-    resetDefaultButton(ui->pnlButtons);
-    enableDefaultButton(ui->btn08Traces);
-    ui->stackedWidget->setCurrentWidget(ui->pg08Traces);
-    ui->pg08Traces->setModel(m_vsp->portList());
-    onActionPortList();
-}
-
-void VSCMainWindow::on_btn09Connect_clicked()
-{
-    resetDefaultButton(ui->pnlButtons);
-    enableDefaultButton(ui->btn09Connect);
-    ui->stackedWidget->setCurrentWidget(ui->pg09Connect);
-}
-
-void VSCMainWindow::on_btn10Close_clicked()
-{
-    resetDefaultButton(ui->pnlButtons);
-    enableDefaultButton(ui->btn10Close);
-}
-
-void VSCMainWindow::onActionSPCreate()
-{
-    if (ui->stackedWidget->currentWidget() != ui->pg01SPCreate) {
-        return;
-    }
-
-    VSPClient::TVSPPortParameters params;
-    params.baudRate = ui->pg01SPCreate->baudRate();
-    params.dataBits = ui->pg01SPCreate->dataBits();
-    params.stopBits = ui->pg01SPCreate->stopBits();
-    params.parity = ui->pg01SPCreate->parity();
-    params.flowCtrl = ui->pg01SPCreate->flowCtrl();
-
-    showOverlay();
-
-    if (!m_vsp->CreatePort(&params)) {
-        onClientError(-1, "CreatePort failed.");
-        return;
-    }
-}
-
-void VSCMainWindow::onActionSPRemove()
-{
-    if (ui->stackedWidget->currentWidget() == ui->pg02SPRemove) {
-        showOverlay();
-        if (!m_vsp->RemovePort(ui->pg02SPRemove->selection().id)) {
-            onClientError(-1, "RemovePort failed.");
-            return;
-        }
-    }
-}
-
-void VSCMainWindow::onActionLKCreate()
-{
-    if (ui->stackedWidget->currentWidget() == ui->pg03LKCreate) {
-        VSPDataModel::TPortItem p1 = ui->pg03LKCreate->selection1();
-        VSPDataModel::TPortItem p2 = ui->pg03LKCreate->selection2();
-        showOverlay();
-        if (!m_vsp->LinkPorts(p1.id, p2.id)) {
-            onClientError(-1, "LinkPorts failed.");
-            return;
-        }
-    }
-}
-
-void VSCMainWindow::onActionLKRemove()
-{
-    if (ui->stackedWidget->currentWidget() == ui->pg04LKRemove) {
-        if (sender() != ui->btn04LKRemove) {
-            VSPDataModel::TPortLink link = ui->pg04LKRemove->selection();
-            showOverlay();
-            if (!m_vsp->UnlinkPorts(link.source.id, link.target.id)) {
-                onClientError(-1, "UnlinkPorts failed.");
-                return;
-            }
-        }
-        else {
-            onActionLinkList();
-        }
-    }
-}
-
-void VSCMainWindow::onActionPortList()
-{
-    showOverlay();
-    if (!m_vsp->GetPortList()) {
-        onClientError(-1, "GetPortList failed.");
-        return;
-    }
-}
-
-void VSCMainWindow::onActionLinkList()
-{
-    showOverlay();
-    if (!m_vsp->GetLinkList()) {
-        onClientError(-1, "GetLinkList failed.");
-        return;
-    }
-}
-
-void VSCMainWindow::onActionEditChecks()
-{
-    showOverlay();
-    if (!m_vsp->EnableChecks(1)) {
-        onClientError(-1, "EnableChecks failed.");
-        return;
-    }
-}
-
-void VSCMainWindow::onActionEditTraces()
-{
-    showOverlay();
-    if (!m_vsp->EnableTrace(1)) {
-        onClientError(-1, "EnableTrace failed.");
-        return;
-    }
-}
-
-void VSCMainWindow::onActionVspConnect()
-{
-    showOverlay();
-    if (!m_vsp->IsConnected() && !m_vsp->ConnectDriver()) {
-        onClientError(-1, "ConnectDriver failed.");
-        onClientDisconnected();
-
-        if (sender() == ui->pg09Connect->button()) {
-            // QDesktopServices::openUrl(QUrl(QStringLiteral("vspinstall://")));
-            m_vsp->activateDriver();
-        }
-
-        return;
-    }
-    if (!m_vsp->GetStatus()) {
-        ui->textBrowser->setPlainText("GetStatus failed.");
-        removeOverlay();
-        return;
-    }
 }
