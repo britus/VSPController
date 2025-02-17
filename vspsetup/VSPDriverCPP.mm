@@ -65,7 +65,7 @@ void onDidFailWithError(uint32_t code, const char* message)
     g_callback->OnDidFailWithError(g_error_code, g_message);
 }
 
-void didFinishWithResult(uint32_t code, const char* message)
+void onDidFinishWithResult(uint32_t code, const char* message)
 {
     strncpy(g_message, message, sizeof(g_message)-1);
     g_error_code = code;

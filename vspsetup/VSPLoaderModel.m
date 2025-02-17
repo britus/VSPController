@@ -15,7 +15,7 @@
 #import <VSPSmLoader.h>
 
 extern void onDidFailWithError(uint32_t code, const char* message);
-extern void didFinishWithResult(uint32_t code, const char* message);
+extern void onDidFinishWithResult(uint32_t code, const char* message);
 extern void onNeedsUserApproval();
 
 @implementation VSPLoaderModel {
@@ -148,7 +148,7 @@ API_AVAILABLE(macos(10.15))
     } else {
         os_log(OS_LOG_DEFAULT, "[VSPLM] %s  %d", "Installation status", (int)result);
     }
-    didFinishWithResult((uint32_t)result, "Installation finished");
+    onDidFinishWithResult((uint32_t)result, "Installation finished");
 }
 
 - (void)requestNeedsUserApproval:(nonnull OSSystemExtensionRequest *)request  API_AVAILABLE(macos(10.15)){
